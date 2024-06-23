@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-//对账报表
+// 对账报表
 type CompareInfo struct {
 	Balance    float32 //当前余额
 	DayBalance float32 //当日余额（当日收入-当日支出）
@@ -23,13 +23,13 @@ type CompareInfo struct {
 	Date DateInfo
 }
 
-//报表页响应
+// 报表页响应
 type CompareReportResponse struct {
 	PageInfo
 	List []CompareInfo
 }
 
-//获取所有对账报表
+// 获取所有对账报表
 func (cli *Client) CompareReport(accountId int, begin, end time.Time) ([]CompareInfo, error) {
 	pageCount := 1
 	list := []CompareInfo{}
@@ -45,7 +45,7 @@ func (cli *Client) CompareReport(accountId int, begin, end time.Time) ([]Compare
 	return list, nil
 }
 
-//获取单页对账报表
+// 获取单页对账报表
 func (cli *Client) CompareReportByPage(accountId int, begin, end time.Time, page int) (CompareReportResponse, error) {
 	data := url.Values{}
 	data.Set("m", "compare")
@@ -69,7 +69,7 @@ func (cli *Client) CompareReportByPage(accountId int, begin, end time.Time, page
 	return respInfo, nil
 }
 
-//日常收支报表
+// 日常收支报表
 type DailyReportList []struct {
 	IdName
 	Total float32
@@ -91,7 +91,7 @@ type DailyReport struct {
 	OutList DailyReportList `json:"outlst"`
 }
 
-//日常收支报表
+// 日常收支报表
 func (cli *Client) DailyReport(begin, end time.Time, params url.Values) (DailyReport, error) {
 	if params == nil {
 		params = url.Values{}
@@ -110,6 +110,43 @@ func (cli *Client) DailyReport(begin, end time.Time, params url.Values) (DailyRe
 	err = json.NewDecoder(resp.Body).Decode(&respInfo)
 	if err != nil {
 		return DailyReport{}, fmt.Errorf("读取出错: %s", err)
+	}
+
+	return respInfo, nil
+}
+
+type AssetReportList []struct {
+	Name   string
+	Symbol string
+	Amount float32
+}
+
+type AssetReport struct {
+	InAbsAmount  float32
+	InAmount     float32
+	InList       AssetReportList `json:"inlst"`  //原始币种金额
+	InListR      AssetReportList `json:"inlstr"` //外币自动折算成人民币
+	OutAbsAmount float32
+	OutAmount    float32
+	OutList      AssetReportList `json:"outlst"`  //原始币种金额
+	OutListR     AssetReportList `json:"outlstr"` //外币自动折算成人民币
+	Symbol       string
+}
+
+// 资产负债表
+func (cli *Client) AssetReport() (AssetReport, error) {
+	params := url.Values{"m": {"asset"}}
+
+	resp, err := cli.PostForm(BaseUrl+"/report.rmi", params)
+	if err != nil {
+		return AssetReport{}, fmt.Errorf("请求出错: %s", err)
+	}
+	defer resp.Body.Close()
+
+	var respInfo AssetReport
+	err = json.NewDecoder(resp.Body).Decode(&respInfo)
+	if err != nil {
+		return AssetReport{}, fmt.Errorf("读取出错: %s", err)
 	}
 
 	return respInfo, nil
